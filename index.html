@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System Simulation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="controls">
+        <label for="speed-slider">Simulation Speed:</label>
+        <input type="range" id="speed-slider" min="0.1" max="2000" value="10" step="0.1">
+        <span id="speed-value">10.0x</span>
+        <button id="toggle-paths">Toggle Orbit Paths</button>
+        <div class="time-info">
+            <p>Current Real Time: <span id="earth-time"></span></p>
+            <p>Simulated Time Elapsed: <span id="sim-time">0 days</span></p>
+        </div>
+    </div>
+
+    <div id="solar-system-container">
+        <div id="solar-system">
+            <div class="celestial-body sun" id="sun" data-name="Sun"></div>
+            <!-- Planets and orbit paths will be added here by JavaScript -->
+        </div>
+    </div>
+
+    <div id="tooltip"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

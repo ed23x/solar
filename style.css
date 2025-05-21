@@ -1,0 +1,97 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #000010;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden; /* Hide scrollbars from large solar system */
+    height: 100vh;
+}
+
+.controls {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 5px;
+    z-index: 1000;
+    font-size: 0.9em;
+}
+
+.controls label, .controls span, .controls p {
+    margin-right: 10px;
+}
+
+.controls input[type="range"] {
+    vertical-align: middle;
+}
+
+.time-info p {
+    margin: 5px 0;
+}
+
+#solar-system-container {
+    width: 100vw;
+    height: calc(100vh - 100px); /* Adjust if controls height changes */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: auto; /* Allow panning if solar system is larger */
+    position: relative;
+    margin-top: 80px; /* Space for controls */
+}
+
+#solar-system {
+    position: relative;
+    /* Dimensions will be set by JS, large enough for outermost orbit */
+}
+
+.celestial-body {
+    position: absolute;
+    border-radius: 50%;
+    transform-origin: center center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); /* Subtle glow */
+}
+
+.sun {
+    background-color: #FFD700; /* Gold */
+    /* Centered by JS */
+}
+
+.planet {
+    /* Specific colors set by JS */
+}
+
+.orbit-path {
+    position: absolute;
+    border: 1px dashed #444; /* Light grey for paths */
+    border-radius: 50%; /* This makes it an ellipse if width != height */
+    /* transform-origin: center center; for path div */
+    pointer-events: none; /* Paths should not interfere with clicks */
+    transition: opacity 0.3s ease-in-out;
+}
+
+.orbit-path.hidden {
+    opacity: 0;
+}
+
+
+#tooltip {
+    position: fixed;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    pointer-events: none; /* So it doesn't block mouse events on planets */
+    display: none; /* Hidden by default */
+    z-index: 1001;
+    white-space: nowrap;
+}
