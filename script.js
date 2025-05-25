@@ -9,18 +9,32 @@ document.addEventListener('DOMContentLoaded', () => {
     const tooltip = document.getElementById('tooltip');
 
     // Constants
-    const AU_TO_PX = 18; // Astronomical Unit to Pixels scale
+    const AU_TO_PX = 7500; // Astronomical Unit to Pixels scale
     const SUN_DIAMETER_KM = 1392700;
     const EARTH_DIAMETER_KM = 12742;
+    const KM_TO_PX_DIAMETER = 0.0001; // Scale for celestial body visual diameter
     
-    const SUN_PX = 60; // Visual size of the Sun in pixels
-    const EARTH_PX_AT_SCALE = 6; // Visual size of Earth if it were the only scaling factor
+    // const SUN_PX = 60; // Visual size of the Sun in pixels - Now dynamically calculated
+    // const EARTH_PX_AT_SCALE = 6; // Visual size of Earth if it were the only scaling factor - Now using KM_TO_PX_DIAMETER
     const MIN_PLANET_PX = 3; // Minimum visual size for any planet/dwarf planet
 
     let simulationSpeed = parseFloat(speedSlider.value); // Days per second at 1x (will be multiplied by slider)
     let totalSimulatedTimeDays = 0;
     let lastTimestamp = 0;
     let pathsVisible = true;
+
+    // Zoom variables
+    let currentScale = 1.0;
+    const ZOOM_SPEED = 0.1;
+    const MIN_ZOOM = 0.0005; // Adjusted for larger orbital scales
+    const MAX_ZOOM = 20;
+
+    // Panning state variables
+    let isPanning = false;
+    let lastPanX = 0;
+    let lastPanY = 0;
+    let panX = 0; // Stores the current horizontal pan offset
+    let panY = 0; // Stores the current vertical pan offset
 
     const solarSystemData = [
         // Planets
@@ -43,9 +57,17 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     function init() {
+        const solarSystemContainerDiv = document.getElementById('solar-system-container');
+        if (solarSystemContainerDiv) {
+            solarSystemContainerDiv.style.cursor = 'grab';
+        }
+
+        // Calculate Sun's visual size
+        const sunDiameterPx = SUN_DIAMETER_KM * KM_TO_PX_DIAMETER;
+
         // Set Sun size and position
-        sunElement.style.width = `${SUN_PX}px`;
-        sunElement.style.height = `${SUN_PX}px`;
+        sunElement.style.width = `${sunDiameterPx}px`;
+        sunElement.style.height = `${sunDiameterPx}px`;
         sunElement.style.backgroundColor = '#FFD700'; // Sun's color
         
         // Calculate max orbit radius to size the solar system div
@@ -55,13 +77,13 @@ document.addEventListener('DOMContentLoaded', () => {
             maxOrbitRadiusPx = Math.max(maxOrbitRadiusPx, apoapsis_au * AU_TO_PX);
         });
 
-        const solarSystemSize = (maxOrbitRadiusPx + SUN_PX / 2) * 2.2; // Add some padding
+        const solarSystemSize = (maxOrbitRadiusPx + sunDiameterPx / 2) * 2.2; // Add some padding
         solarSystemDiv.style.width = `${solarSystemSize}px`;
         solarSystemDiv.style.height = `${solarSystemSize}px`;
 
         // Center Sun in the #solar-system div
-        sunElement.style.left = `calc(50% - ${SUN_PX / 2}px)`;
-        sunElement.style.top = `calc(50% - ${SUN_PX / 2}px)`;
+        sunElement.style.left = `calc(50% - ${sunDiameterPx / 2}px)`;
+        sunElement.style.top = `calc(50% - ${sunDiameterPx / 2}px)`;
 
         solarSystemData.forEach(body => {
             // Create orbit path
@@ -90,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
             planetElement.id = body.name.toLowerCase();
             planetElement.dataset.name = body.name; // For tooltip
 
-            const planetSize = Math.max(MIN_PLANET_PX, (body.diameter_km / EARTH_DIAMETER_KM) * EARTH_PX_AT_SCALE);
+            const planetSize = Math.max(MIN_PLANET_PX, body.diameter_km * KM_TO_PX_DIAMETER);
             planetElement.style.width = `${planetSize}px`;
             planetElement.style.height = `${planetSize}px`;
             planetElement.style.backgroundColor = body.color;
@@ -108,10 +130,12 @@ document.addEventListener('DOMContentLoaded', () => {
             planetElement.addEventListener('mouseenter', (e) => showTooltip(e, body));
             planetElement.addEventListener('mousemove', (e) => updateTooltipPosition(e));
             planetElement.addEventListener('mouseleave', () => hideTooltip());
+            planetElement.addEventListener('click', () => focusOnBody(body));
         });
         sunElement.addEventListener('mouseenter', (e) => showTooltip(e, {name: "Sun", diameter_km: SUN_DIAMETER_KM, orbitalPeriod_days: "N/A"}));
         sunElement.addEventListener('mousemove', (e) => updateTooltipPosition(e));
         sunElement.addEventListener('mouseleave', () => hideTooltip());
+        sunElement.addEventListener('click', () => focusOnBody({ name: "Sun", element: sunElement, current_x_px: 0, current_y_px: 0 }));
 
 
         speedSlider.addEventListener('input', (e) => {
@@ -175,6 +199,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const x_px = r_px * Math.cos(nu);
         const y_px = r_px * Math.sin(nu);
 
+        // Store current pixel coordinates on the body object for focus functionality
+        body.current_x_px = x_px;
+        body.current_y_px = y_px;
+
         // Apply transform. translate(-50%, -50%) centers the planet div on its calculated (x,y) point.
         // The (x_px, y_px) are offsets from the center of solarSystemDiv (where Sun is)
         const planetSize = parseFloat(body.element.style.width);
@@ -227,5 +255,67 @@ document.addEventListener('DOMContentLoaded', () => {
         tooltip.style.display = 'none';
     }
 
+    function focusOnBody(bodyToFocus) {
+        if (!bodyToFocus) return;
+
+        // Ensure current_x_px and current_y_px are numbers. For the Sun, they are explicitly set.
+        // For planets, they should be set by updatePlanetPosition.
+        const targetX = typeof bodyToFocus.current_x_px === 'number' ? bodyToFocus.current_x_px : 0;
+        const targetY = typeof bodyToFocus.current_y_px === 'number' ? bodyToFocus.current_y_px : 0;
+        
+        panX = -targetX * currentScale;
+        panY = -targetY * currentScale;
+
+        // Apply the new pan and existing scale
+        solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
+    }
+
     init();
+
+    const solarSystemContainerDiv = document.getElementById('solar-system-container');
+    solarSystemContainerDiv.addEventListener('wheel', (event) => {
+        event.preventDefault();
+        const delta = event.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED; // Scroll down zooms out, scroll up zooms in
+        let newScale = currentScale + delta;
+        newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
+        currentScale = newScale;
+
+        solarSystemDiv.style.transformOrigin = 'center center'; // Keep for scale, translate is independent
+        solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
+    });
+
+    // Panning event listeners
+    solarSystemContainerDiv.addEventListener('mousedown', (event) => {
+        event.preventDefault(); // Prevent text selection, etc.
+        isPanning = true;
+        lastPanX = event.clientX;
+        lastPanY = event.clientY;
+        solarSystemContainerDiv.style.cursor = 'grabbing';
+    });
+
+    solarSystemContainerDiv.addEventListener('mousemove', (event) => {
+        if (isPanning) {
+            const dX = event.clientX - lastPanX;
+            const dY = event.clientY - lastPanY;
+            panX += dX;
+            panY += dY;
+            lastPanX = event.clientX;
+            lastPanY = event.clientY;
+            solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
+        }
+    });
+
+    solarSystemContainerDiv.addEventListener('mouseup', () => {
+        if (isPanning) {
+            isPanning = false;
+            solarSystemContainerDiv.style.cursor = 'grab';
+        }
+    });
+
+    solarSystemContainerDiv.addEventListener('mouseleave', () => {
+        if (isPanning) {
+            isPanning = false;
+            solarSystemContainerDiv.style.cursor = 'grab';
+        }
+    });
 });
