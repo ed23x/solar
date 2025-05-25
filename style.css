@@ -29,6 +29,16 @@ body {
     vertical-align: middle;
 }
 
+#speed-text-input {
+    width: 60px;
+    margin-left: 5px;
+    padding: 3px;
+    border: 1px solid #ccc;
+    background-color: #333;
+    color: #fff;
+    vertical-align: middle; /* Align with slider and span */
+}
+
 .time-info p {
     margin: 5px 0;
 }
