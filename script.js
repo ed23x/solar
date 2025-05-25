@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const simTimeSpan = document.getElementById('sim-time');
     const togglePathsButton = document.getElementById('toggle-paths');
     const tooltip = document.getElementById('tooltip');
+    const infoPanel = document.getElementById('info-panel');
+    const infoPanelTitle = document.getElementById('info-panel-title');
+    const infoPanelContent = document.getElementById('info-panel-content');
 
     // Constants
     const AU_TO_PX = 750; // Astronomical Unit to Pixels scale
@@ -36,6 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let panX = 0; // Stores the current horizontal pan offset
     let panY = 0; // Stores the current vertical pan offset
 
+    // Follow state variable
+    let focusedBody = null; 
+
     const solarSystemData = [
         // Planets
         { name: "Mercury", diameter_km: 4879,  color: "#B0AFA2", semiMajorAxis_au: 0.387, orbitalPeriod_days: 87.97, eccentricity: 0.2056 },
@@ -57,6 +63,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     function init() {
+        if (infoPanel) { // Ensure panel is hidden initially
+            infoPanel.style.display = 'none';
+        }
+
         const solarSystemContainerDiv = document.getElementById('solar-system-container');
         if (solarSystemContainerDiv) {
             solarSystemContainerDiv.style.cursor = 'grab';
@@ -260,6 +270,23 @@ document.addEventListener('DOMContentLoaded', () => {
             updatePlanetPosition(body, totalSimulatedTimeDays);
         });
 
+        // Follow logic - after positions are updated, if a body is focused, adjust pan to keep it centered.
+        if (focusedBody) {
+            // If the user is actively panning, the mousemove handler will take precedence.
+            // If the user is actively zooming, the wheel handler will take precedence.
+            // This follow logic applies if no other interaction is immediately overriding the transform.
+            if (focusedBody.name === "Sun") {
+                panX = 0;
+                panY = 0;
+            } else if (focusedBody.current_x_px !== undefined && focusedBody.current_y_px !== undefined) {
+                // Ensure current_x_px and current_y_px are available (they should be if updatePlanetPosition ran)
+                panX = -focusedBody.current_x_px * currentScale;
+                panY = -focusedBody.current_y_px * currentScale;
+            }
+            // Apply the transform to keep the focused body centered, or Sun at origin
+            solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
+        }
+
         requestAnimationFrame(animate);
     }
 
@@ -298,11 +325,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Apply the new pan and existing scale
         solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
+        
+        focusedBody = bodyToFocus; // Set the globally focused body
+
+        // Update and display the info panel
+        if (infoPanel && infoPanelTitle && infoPanelContent) {
+            if (bodyToFocus && bodyToFocus.name !== "Sun") { // For now, Sun doesn't show detailed info panel
+                infoPanelTitle.textContent = bodyToFocus.name;
+                let htmlContent = `<p><strong>Diameter:</strong> ${bodyToFocus.diameter_km.toLocaleString()} km</p>`;
+                if (bodyToFocus.orbitalPeriod_days) { // Check if orbital data exists
+                    htmlContent += `<p><strong>Orbital Period:</strong> ${parseFloat(bodyToFocus.orbitalPeriod_days).toFixed(2)} Earth days</p>`;
+                    htmlContent += `<p><strong>Semi-Major Axis:</strong> ${bodyToFocus.semiMajorAxis_au} AU</p>`;
+                    htmlContent += `<p><strong>Eccentricity:</strong> ${bodyToFocus.eccentricity}</p>`;
+                }
+                // Add more data points if available and desired
+                infoPanelContent.innerHTML = htmlContent;
+                infoPanel.style.display = 'block';
+            } else {
+                infoPanel.style.display = 'none'; // Hide for Sun or if no body is focused
+            }
+        }
     }
 
     init();
 
     const solarSystemContainerDiv = document.getElementById('solar-system-container');
+
+    // Unfocus function
+    function unfocusBody() {
+        focusedBody = null;
+        if (infoPanel) {
+            infoPanel.style.display = 'none';
+        }
+        // The animate() loop will naturally stop specific follow behavior
+        // and the Sun-specific centering will also stop if focusedBody is truly null.
+        // If a general "return to Sun at origin" is desired on unfocus, 
+        // you might add panX = 0; panY = 0; here and update transform.
+        // For now, it just stops active follow and hides info.
+    }
+
+    // Event listeners for unfocus
+    if (solarSystemContainerDiv) {
+        solarSystemContainerDiv.addEventListener('click', (event) => {
+            if (event.target === solarSystemContainerDiv) {
+                unfocusBody();
+            }
+        });
+    }
+    // Global Escape key listener
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            unfocusBody();
+        }
+    });
+
     solarSystemContainerDiv.addEventListener('wheel', (event) => {
         event.preventDefault();
         const delta = event.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED; // Scroll down zooms out, scroll up zooms in
