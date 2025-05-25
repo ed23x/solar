@@ -146,3 +146,37 @@ body {
     background-color: #4D4D4D; /* Darken on hover */
     border-color: #777;
 }
+
+/* Info Panel Styles */
+#info-panel {
+    position: fixed;
+    right: 10px;
+    top: 10px; 
+    width: 250px; 
+    background-color: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    max-height: 90vh;
+    overflow-y: auto;
+    z-index: 1000; 
+    display: none; /* Initially hidden */
+}
+
+#info-panel-title {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+    border-bottom: 1px solid #555;
+    padding-bottom: 8px;
+}
+
+#info-panel-content p {
+    margin: 5px 0;
+    line-height: 1.4;
+    font-size: 0.9em;
+}
+
+#info-panel-content strong {
+    color: #aaa; /* Lighter color for labels */
+}
