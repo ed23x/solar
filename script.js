@@ -8,21 +8,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const togglePathsButton = document.getElementById('toggle-paths');
     const tooltip = document.getElementById('tooltip');
     const speedTextInput = document.getElementById('speed-text-input');
+    const setSpeedButton = document.getElementById('set-speed-button');
     const infoPanel = document.getElementById('info-panel');
     const infoPanelTitle = document.getElementById('info-panel-title');
     const infoPanelContent = document.getElementById('info-panel-content');
+
+    // Time control elements
+    const timeInput = document.getElementById('time-input');
+    const setTimeButton = document.getElementById('set-time-button');
+    const rewindYearButton = document.getElementById('rewind-year-button');
+    const rewindMonthButton = document.getElementById('rewind-month-button');
+    const advanceMonthButton = document.getElementById('advance-month-button');
+    const advanceYearButton = document.getElementById('advance-year-button');
 
     // Constants
     const AU_TO_PX = 750; // Astronomical Unit to Pixels scale
     const SUN_DIAMETER_KM = 1392700;
     const EARTH_DIAMETER_KM = 12742;
     const KM_TO_PX_DIAMETER = 0.00001; // Scale for celestial body visual diameter
-    
-    // const SUN_PX = 60; // Visual size of the Sun in pixels - Now dynamically calculated
-    // const EARTH_PX_AT_SCALE = 6; // Visual size of Earth if it were the only scaling factor - Now using KM_TO_PX_DIAMETER
     const MIN_PLANET_PX = 3; // Minimum visual size for any planet/dwarf planet
 
-    let simulationSpeed = parseFloat(speedSlider.value); // Days per second at 1x (will be multiplied by slider)
+    let simulationSpeed = parseFloat(speedSlider.value); 
     let totalSimulatedTimeDays = 0;
     let lastTimestamp = 0;
     let pathsVisible = true;
@@ -30,47 +36,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // Zoom variables
     let currentScale = 1.0;
     const ZOOM_SPEED = 0.1;
-    const MIN_ZOOM = 0.005; // Adjusted for 10x smaller overall scales
+    const MIN_ZOOM = 0.005; 
     const MAX_ZOOM = 20;
 
     // Panning state variables
     let isPanning = false;
     let lastPanX = 0;
     let lastPanY = 0;
-    let panX = 0; // Stores the current horizontal pan offset
-    let panY = 0; // Stores the current vertical pan offset
+    let panX = 0; 
+    let panY = 0; 
 
     // Follow state variable
     let focusedBody = null; 
 
     const solarSystemData = [
-        // Planets
         { name: "Mercury", diameter_km: 4879,  color: "#B0AFA2", semiMajorAxis_au: 0.387, orbitalPeriod_days: 87.97, eccentricity: 0.2056 },
         { name: "Venus",   diameter_km: 12104, color: "#E6E2D4", semiMajorAxis_au: 0.723, orbitalPeriod_days: 224.70, eccentricity: 0.0068 },
         { name: "Earth",   diameter_km: 12742, color: "#6B93D6", semiMajorAxis_au: 1.000, orbitalPeriod_days: 365.25, eccentricity: 0.0167 },
         { name: "Mars",    diameter_km: 6779,  color: "#C1440E", semiMajorAxis_au: 1.524, orbitalPeriod_days: 686.98, eccentricity: 0.0934 },
-        // Dwarf Planets
         { name: "Ceres",   diameter_km: 940,   color: "#8C8C8C", semiMajorAxis_au: 2.766, orbitalPeriod_days: 1680.5, eccentricity: 0.0785 },
-        // Planets
         { name: "Jupiter", diameter_km: 139820,color: "#D8CA9D", semiMajorAxis_au: 5.204, orbitalPeriod_days: 4332.59, eccentricity: 0.0489 },
         { name: "Saturn",  diameter_km: 116460,color: "#F4D0A0", semiMajorAxis_au: 9.582, orbitalPeriod_days: 10759.22, eccentricity: 0.0565 },
         { name: "Uranus",  diameter_km: 50724, color: "#ACE5EE", semiMajorAxis_au: 19.218, orbitalPeriod_days: 30688.5, eccentricity: 0.0463 },
         { name: "Neptune", diameter_km: 49244, color: "#5B5DDF", semiMajorAxis_au: 30.110, orbitalPeriod_days: 60182, eccentricity: 0.0094 },
-        // Dwarf Planets
         { name: "Pluto",   diameter_km: 2376,  color: "#BFB5A7", semiMajorAxis_au: 39.482, orbitalPeriod_days: 90560, eccentricity: 0.2488 },
-        { name: "Haumea",  diameter_km: 1632,  color: "#D1EAF5", semiMajorAxis_au: 43.13, orbitalPeriod_days: 103770, eccentricity: 0.1912 }, // mean diameter
+        { name: "Haumea",  diameter_km: 1632,  color: "#D1EAF5", semiMajorAxis_au: 43.13, orbitalPeriod_days: 103770, eccentricity: 0.1912 }, 
         { name: "Makemake",diameter_km: 1430,  color: "#F4A460", semiMajorAxis_au: 45.79, orbitalPeriod_days: 111800, eccentricity: 0.1559 },
         { name: "Eris",    diameter_km: 2326,  color: "#C0C0C0", semiMajorAxis_au: 67.67, orbitalPeriod_days: 203830, eccentricity: 0.4410 }
     ];
 
     function init() {
-        if (infoPanel) { // Ensure panel is hidden initially
+        if (infoPanel) { 
             infoPanel.style.display = 'none';
         }
 
-        // Initialize speed text input
         if (speedTextInput && speedSlider) {
             speedTextInput.value = parseFloat(speedSlider.value).toFixed(1);
+        }
+        if (timeInput) {
+            timeInput.value = totalSimulatedTimeDays.toFixed(0);
         }
 
         const solarSystemContainerDiv = document.getElementById('solar-system-container');
@@ -78,39 +82,32 @@ document.addEventListener('DOMContentLoaded', () => {
             solarSystemContainerDiv.style.cursor = 'grab';
         }
 
-        // Calculate Sun's visual size
         const sunDiameterPx = SUN_DIAMETER_KM * KM_TO_PX_DIAMETER;
-
-        // Set Sun size and position
         sunElement.style.width = `${sunDiameterPx}px`;
         sunElement.style.height = `${sunDiameterPx}px`;
-        sunElement.style.backgroundColor = '#FFD700'; // Sun's color
+        sunElement.style.background = '#FFD700'; // Sun's color (simple, no gradient for Sun)
         
-        // Calculate max orbit radius to size the solar system div
         let maxOrbitRadiusPx = 0;
         solarSystemData.forEach(body => {
             const apoapsis_au = body.semiMajorAxis_au * (1 + body.eccentricity);
             maxOrbitRadiusPx = Math.max(maxOrbitRadiusPx, apoapsis_au * AU_TO_PX);
         });
 
-        const solarSystemSize = (maxOrbitRadiusPx + sunDiameterPx / 2) * 2.2; // Add some padding
+        const solarSystemSize = (maxOrbitRadiusPx + sunDiameterPx / 2) * 2.2; 
         solarSystemDiv.style.width = `${solarSystemSize}px`;
         solarSystemDiv.style.height = `${solarSystemSize}px`;
 
-        // Center Sun in the #solar-system div
         sunElement.style.left = `calc(50% - ${sunDiameterPx / 2}px)`;
         sunElement.style.top = `calc(50% - ${sunDiameterPx / 2}px)`;
 
         const planetListUl = document.getElementById('planet-list');
-
-        // Add Sun to the list
         if (planetListUl) {
             const sunLi = document.createElement('li');
             const sunButton = document.createElement('button');
             sunButton.textContent = "Sun";
             sunButton.addEventListener('click', () => focusOnBody({ 
                 name: "Sun", 
-                element: sunElement, // The actual sun DOM element
+                element: sunElement, 
                 current_x_px: 0, 
                 current_y_px: 0 
             }));
@@ -119,53 +116,73 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         solarSystemData.forEach(body => {
-            // Create orbit path
-            const a_px = body.semiMajorAxis_au * AU_TO_PX; // Semi-major axis in pixels
-            const b_px = a_px * Math.sqrt(1 - body.eccentricity ** 2); // Semi-minor axis in pixels
-            const c_px = a_px * body.eccentricity; // Distance from center to focus
+            const a_px = body.semiMajorAxis_au * AU_TO_PX; 
+            const b_px = a_px * Math.sqrt(1 - body.eccentricity ** 2); 
+            const c_px = a_px * body.eccentricity; 
 
             const orbitPath = document.createElement('div');
             orbitPath.classList.add('orbit-path');
             orbitPath.id = `orbit-${body.name.toLowerCase()}`;
             orbitPath.style.width = `${2 * a_px}px`;
             orbitPath.style.height = `${2 * b_px}px`;
-            // Position the orbit ellipse so one focus is at the Sun's center
-            // The Sun is at (0,0) of the solarSystemDiv's logical center.
-            // Ellipse center is (offsetX, 0) relative to Sun.
-            // translateX needs to shift the ellipse's geometric center by -c_px
-            // so its left focus aligns with the Sun if perihelion is on the right.
             orbitPath.style.left = '50%';
             orbitPath.style.top = '50%';
             orbitPath.style.transform = `translate(calc(-50% - ${c_px}px), -50%)`;
             solarSystemDiv.appendChild(orbitPath);
 
-            // Create planet element
             const planetElement = document.createElement('div');
             planetElement.classList.add('celestial-body', 'planet');
             planetElement.id = body.name.toLowerCase();
-            planetElement.dataset.name = body.name; // For tooltip
+            planetElement.dataset.name = body.name; 
 
             const planetSize = Math.max(MIN_PLANET_PX, body.diameter_km * KM_TO_PX_DIAMETER);
             planetElement.style.width = `${planetSize}px`;
             planetElement.style.height = `${planetSize}px`;
-            planetElement.style.backgroundColor = body.color;
             
-            // Initial position (will be updated in animation loop)
-            // Positioned relative to solarSystemDiv center (where Sun is)
-            planetElement.style.left = '50%'; // This is relative to parent's padding box
-            planetElement.style.top = '50%';  // We adjust with transform translate
+            switch (body.name) {
+                case "Jupiter":
+                    planetElement.style.background = `radial-gradient(circle at 60% 70%, #d8ca9d 10%, #a58855 30%, #c9a16f 60%)`;
+                    break;
+                case "Mars":
+                    planetElement.style.background = `radial-gradient(circle, #C1440E, #e86100)`;
+                    break;
+                case "Earth":
+                    planetElement.style.background = `radial-gradient(circle at 35% 35%, #ffffff 2%, #6B93D6 30%, #4682B4 60%, #3A5F0B 80%, #2E4D09 100%)`;
+                    break;
+                case "Venus":
+                    planetElement.style.background = `radial-gradient(circle, #E6E2D4, #d4c8a0)`;
+                    break;
+                case "Neptune":
+                    planetElement.style.background = `radial-gradient(circle, #5B5DDF, #3E409A)`;
+                    break;
+                case "Uranus":
+                    planetElement.style.background = `radial-gradient(circle, #ACE5EE, #87B2C0)`;
+                    break;
+                default:
+                    planetElement.style.backgroundColor = body.color; 
+            }
 
-            body.element = planetElement; // Store element reference
+            if (body.name === "Saturn") {
+                const ringsElement = document.createElement('div');
+                ringsElement.classList.add('saturn-rings');
+                const ringBorderThickness = Math.min(2, Math.max(1, Math.round(planetSize * 0.1)));
+                ringsElement.style.borderWidth = `${ringBorderThickness}px`;
+                planetElement.appendChild(ringsElement);
+                body.ringsElement = ringsElement; 
+            }
+            
+            planetElement.style.left = '50%'; 
+            planetElement.style.top = '50%';  
+
+            body.element = planetElement; 
             body.orbitPathElement = orbitPath;
             solarSystemDiv.appendChild(planetElement);
 
-            // Tooltip events
             planetElement.addEventListener('mouseenter', (e) => showTooltip(e, body));
             planetElement.addEventListener('mousemove', (e) => updateTooltipPosition(e));
             planetElement.addEventListener('mouseleave', () => hideTooltip());
-            planetElement.addEventListener('click', () => focusOnBody(body)); // Existing click on planet itself
+            planetElement.addEventListener('click', () => focusOnBody(body)); 
 
-            // Add body to the list
             if (planetListUl) {
                 const li = document.createElement('li');
                 const button = document.createElement('button');
@@ -178,9 +195,6 @@ document.addEventListener('DOMContentLoaded', () => {
         sunElement.addEventListener('mouseenter', (e) => showTooltip(e, {name: "Sun", diameter_km: SUN_DIAMETER_KM, orbitalPeriod_days: "N/A"}));
         sunElement.addEventListener('mousemove', (e) => updateTooltipPosition(e));
         sunElement.addEventListener('mouseleave', () => hideTooltip());
-        // sunElement's click listener for focus is already set up for the element itself.
-        // The list button for Sun is handled separately above.
-        // Ensure the original sunElement click listener (not the list one) is still here:
         sunElement.addEventListener('click', () => focusOnBody({ name: "Sun", element: sunElement, current_x_px: 0, current_y_px: 0 }));
 
 
@@ -192,7 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Speed text input listeners
         if (speedTextInput && speedSlider && speedValueSpan) {
             speedTextInput.addEventListener('keypress', function(event) {
                 if (event.key === 'Enter') {
@@ -202,6 +215,27 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             speedTextInput.addEventListener('blur', applySpeedFromTextInput);
         }
+
+        if (setSpeedButton) {
+            setSpeedButton.addEventListener('click', applySpeedFromTextInput);
+        }
+        
+        // Time control event listeners
+        if (setTimeButton && timeInput) {
+            setTimeButton.addEventListener('click', applyCustomTime);
+            timeInput.addEventListener('keypress', (e) => { 
+                if (e.key === 'Enter') {
+                    applyCustomTime();
+                    e.preventDefault();
+                } 
+            });
+            timeInput.addEventListener('blur', applyCustomTime);
+        }
+        if (advanceYearButton) advanceYearButton.addEventListener('click', () => adjustTime(365.25));
+        if (advanceMonthButton) advanceMonthButton.addEventListener('click', () => adjustTime(30)); 
+        if (rewindMonthButton) rewindMonthButton.addEventListener('click', () => adjustTime(-30));
+        if (rewindYearButton) rewindYearButton.addEventListener('click', () => adjustTime(-365.25));
+
 
         togglePathsButton.addEventListener('click', () => {
             pathsVisible = !pathsVisible;
@@ -217,8 +251,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function solveKepler(M, e, maxIter = 10, tolerance = 1e-7) {
-        let E = M; // Initial guess for eccentric anomaly
-        if (e > 0.8) E = Math.PI; // Better initial guess for high eccentricity
+        let E = M; 
+        if (e > 0.8) E = Math.PI; 
 
         for (let i = 0; i < maxIter; i++) {
             const E_prev = E;
@@ -233,39 +267,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updatePlanetPosition(body, time_days) {
-        if (!body.orbitalPeriod_days || body.orbitalPeriod_days === 0) return; // Sun or static body
+        if (!body.orbitalPeriod_days || body.orbitalPeriod_days === 0) return; 
 
         const a_au = body.semiMajorAxis_au;
         const e = body.eccentricity;
         const T_days = body.orbitalPeriod_days;
 
-        // 1. Mean Anomaly (M)
-        // (2 * PI / T) is mean motion 'n'
         const M = ((2 * Math.PI / T_days) * time_days) % (2 * Math.PI);
-
-        // 2. Eccentric Anomaly (E) - solve M = E - e * sin(E)
         const E = solveKepler(M, e);
-
-        // 3. True Anomaly (nu)
-        // Using atan2 for quadrant correctness
         const nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
-
-        // 4. Distance from Sun (r)
         const r_au = a_au * (1 - e * Math.cos(E));
         const r_px = r_au * AU_TO_PX;
 
-        // 5. Cartesian coordinates (x, y) relative to Sun (focus)
-        // Sun is at (0,0). Perihelion is along positive x-axis.
         const x_px = r_px * Math.cos(nu);
         const y_px = r_px * Math.sin(nu);
 
-        // Store current pixel coordinates on the body object for focus functionality
         body.current_x_px = x_px;
         body.current_y_px = y_px;
-
-        // Apply transform. translate(-50%, -50%) centers the planet div on its calculated (x,y) point.
-        // The (x_px, y_px) are offsets from the center of solarSystemDiv (where Sun is)
-        const planetSize = parseFloat(body.element.style.width);
+        
         body.element.style.transform = `translate(calc(-50% + ${x_px}px), calc(-50% + ${y_px}px))`;
     }
     
@@ -277,33 +296,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const deltaTimeMs = timestamp - lastTimestamp;
         lastTimestamp = timestamp;
 
-        // Assuming simulationSpeed is "simulated days per REAL second"
         const simulatedDaysThisFrame = (simulationSpeed * (deltaTimeMs / 1000));
         totalSimulatedTimeDays += simulatedDaysThisFrame;
 
-        // Update simulated time display
         const years = Math.floor(totalSimulatedTimeDays / 365.25);
         const days = Math.floor(totalSimulatedTimeDays % 365.25);
         simTimeSpan.textContent = `${years} years, ${days} days`;
+        
+        if (timeInput && document.activeElement !== timeInput) { 
+            timeInput.value = totalSimulatedTimeDays.toFixed(0);
+        }
 
         solarSystemData.forEach(body => {
             updatePlanetPosition(body, totalSimulatedTimeDays);
         });
 
-        // Follow logic - after positions are updated, if a body is focused, adjust pan to keep it centered.
         if (focusedBody) {
-            // If the user is actively panning, the mousemove handler will take precedence.
-            // If the user is actively zooming, the wheel handler will take precedence.
-            // This follow logic applies if no other interaction is immediately overriding the transform.
             if (focusedBody.name === "Sun") {
                 panX = 0;
                 panY = 0;
             } else if (focusedBody.current_x_px !== undefined && focusedBody.current_y_px !== undefined) {
-                // Ensure current_x_px and current_y_px are available (they should be if updatePlanetPosition ran)
                 panX = -focusedBody.current_x_px * currentScale;
                 panY = -focusedBody.current_y_px * currentScale;
             }
-            // Apply the transform to keep the focused body centered, or Sun at origin
             solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
         }
 
@@ -335,61 +350,75 @@ document.addEventListener('DOMContentLoaded', () => {
     function focusOnBody(bodyToFocus) {
         if (!bodyToFocus) return;
 
-        // Ensure current_x_px and current_y_px are numbers. For the Sun, they are explicitly set.
-        // For planets, they should be set by updatePlanetPosition.
         const targetX = typeof bodyToFocus.current_x_px === 'number' ? bodyToFocus.current_x_px : 0;
         const targetY = typeof bodyToFocus.current_y_px === 'number' ? bodyToFocus.current_y_px : 0;
         
         panX = -targetX * currentScale;
         panY = -targetY * currentScale;
 
-        // Apply the new pan and existing scale
         solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
         
-        focusedBody = bodyToFocus; // Set the globally focused body
+        focusedBody = bodyToFocus; 
 
-        // Update and display the info panel
         if (infoPanel && infoPanelTitle && infoPanelContent) {
-            if (bodyToFocus && bodyToFocus.name !== "Sun") { // For now, Sun doesn't show detailed info panel
+            if (bodyToFocus && bodyToFocus.name !== "Sun") { 
                 infoPanelTitle.textContent = bodyToFocus.name;
                 let htmlContent = `<p><strong>Diameter:</strong> ${bodyToFocus.diameter_km.toLocaleString()} km</p>`;
-                if (bodyToFocus.orbitalPeriod_days) { // Check if orbital data exists
+                if (bodyToFocus.orbitalPeriod_days) { 
                     htmlContent += `<p><strong>Orbital Period:</strong> ${parseFloat(bodyToFocus.orbitalPeriod_days).toFixed(2)} Earth days</p>`;
                     htmlContent += `<p><strong>Semi-Major Axis:</strong> ${bodyToFocus.semiMajorAxis_au} AU</p>`;
                     htmlContent += `<p><strong>Eccentricity:</strong> ${bodyToFocus.eccentricity}</p>`;
                 }
-                // Add more data points if available and desired
                 infoPanelContent.innerHTML = htmlContent;
                 infoPanel.style.display = 'block';
             } else {
-                infoPanel.style.display = 'none'; // Hide for Sun or if no body is focused
+                infoPanel.style.display = 'none'; 
             }
         }
     }
 
     function applySpeedFromTextInput() {
-        if (!speedTextInput || !speedSlider || !speedValueSpan) return;
+        if (!speedTextInput || !speedSlider || !speedValueSpan) {
+            return;
+        }
 
-        const textValue = parseFloat(speedTextInput.value);
+        let newSpeed = parseFloat(speedTextInput.value);
         const minSpeed = parseFloat(speedSlider.min);
         const maxSpeed = parseFloat(speedSlider.max);
 
-        if (!isNaN(textValue)) {
-            if (textValue >= minSpeed && textValue <= maxSpeed) {
-                simulationSpeed = textValue;
-                speedSlider.value = textValue; 
-                speedValueSpan.textContent = `${textValue.toFixed(1)}x`;
-            } else {
-                // Value out of range, clamp it
-                const clampedValue = Math.max(minSpeed, Math.min(maxSpeed, textValue));
-                simulationSpeed = clampedValue;
-                speedSlider.value = clampedValue;
-                speedTextInput.value = clampedValue.toFixed(1); 
-                speedValueSpan.textContent = `${clampedValue.toFixed(1)}x`;
+        if (!isNaN(newSpeed)) {
+            if (newSpeed < minSpeed) {
+                newSpeed = minSpeed;
+                speedTextInput.value = newSpeed.toFixed(1);
+            } else if (newSpeed > maxSpeed) {
+                newSpeed = maxSpeed;
+                speedTextInput.value = newSpeed.toFixed(1);
             }
+            
+            speedSlider.value = newSpeed; 
+            simulationSpeed = newSpeed;   
+            speedValueSpan.textContent = `${newSpeed.toFixed(1)}x`; 
         } else {
-            // Invalid input, revert to current slider value
-            speedTextInput.value = parseFloat(speedSlider.value).toFixed(1);
+            speedTextInput.value = simulationSpeed.toFixed(1);
+        }
+    }
+    
+    function applyCustomTime() {
+        if (!timeInput) return;
+        const newTimeDays = parseFloat(timeInput.value);
+        if (!isNaN(newTimeDays)) {
+            totalSimulatedTimeDays = Math.max(0, newTimeDays); 
+        } else {
+            timeInput.value = totalSimulatedTimeDays.toFixed(0);
+        }
+    }
+
+    function adjustTime(days) {
+        totalSimulatedTimeDays += days;
+        if (totalSimulatedTimeDays < 0) totalSimulatedTimeDays = 0; 
+
+        if (timeInput && document.activeElement !== timeInput) {
+            timeInput.value = totalSimulatedTimeDays.toFixed(0);
         }
     }
 
@@ -397,20 +426,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const solarSystemContainerDiv = document.getElementById('solar-system-container');
 
-    // Unfocus function
     function unfocusBody() {
         focusedBody = null;
         if (infoPanel) {
             infoPanel.style.display = 'none';
         }
-        // The animate() loop will naturally stop specific follow behavior
-        // and the Sun-specific centering will also stop if focusedBody is truly null.
-        // If a general "return to Sun at origin" is desired on unfocus, 
-        // you might add panX = 0; panY = 0; here and update transform.
-        // For now, it just stops active follow and hides info.
     }
 
-    // Event listeners for unfocus
     if (solarSystemContainerDiv) {
         solarSystemContainerDiv.addEventListener('click', (event) => {
             if (event.target === solarSystemContainerDiv) {
@@ -418,7 +440,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    // Global Escape key listener
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             unfocusBody();
@@ -427,18 +448,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     solarSystemContainerDiv.addEventListener('wheel', (event) => {
         event.preventDefault();
-        const delta = event.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED; // Scroll down zooms out, scroll up zooms in
-        let newScale = currentScale + delta;
-        newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
+        const solarSystemRect = solarSystemDiv.getBoundingClientRect();
+        const mouseX_relativeToDivOrigin_viewport = event.clientX - solarSystemRect.left;
+        const mouseY_relativeToDivOrigin_viewport = event.clientY - solarSystemRect.top;
+        const mouseX_unscaled = (mouseX_relativeToDivOrigin_viewport - panX) / currentScale;
+        const mouseY_unscaled = (mouseY_relativeToDivOrigin_viewport - panY) / currentScale;
+        const scaleFactor = event.deltaY > 0 ? 1 - ZOOM_SPEED : 1 + ZOOM_SPEED;
+        const newScaleAttempt = currentScale * scaleFactor;
+        const newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScaleAttempt));
+        panX = mouseX_relativeToDivOrigin_viewport - mouseX_unscaled * newScale;
+        panY = mouseY_relativeToDivOrigin_viewport - mouseY_unscaled * newScale;
         currentScale = newScale;
-
-        solarSystemDiv.style.transformOrigin = 'center center'; // Keep for scale, translate is independent
+        solarSystemDiv.style.transformOrigin = '0 0'; 
         solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
     });
 
-    // Panning event listeners
     solarSystemContainerDiv.addEventListener('mousedown', (event) => {
-        event.preventDefault(); // Prevent text selection, etc.
+        event.preventDefault(); 
         isPanning = true;
         lastPanX = event.clientX;
         lastPanY = event.clientY;
