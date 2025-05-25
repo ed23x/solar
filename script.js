@@ -9,10 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const tooltip = document.getElementById('tooltip');
 
     // Constants
-    const AU_TO_PX = 7500; // Astronomical Unit to Pixels scale
+    const AU_TO_PX = 750; // Astronomical Unit to Pixels scale
     const SUN_DIAMETER_KM = 1392700;
     const EARTH_DIAMETER_KM = 12742;
-    const KM_TO_PX_DIAMETER = 0.0001; // Scale for celestial body visual diameter
+    const KM_TO_PX_DIAMETER = 0.00001; // Scale for celestial body visual diameter
     
     // const SUN_PX = 60; // Visual size of the Sun in pixels - Now dynamically calculated
     // const EARTH_PX_AT_SCALE = 6; // Visual size of Earth if it were the only scaling factor - Now using KM_TO_PX_DIAMETER
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Zoom variables
     let currentScale = 1.0;
     const ZOOM_SPEED = 0.1;
-    const MIN_ZOOM = 0.0005; // Adjusted for larger orbital scales
+    const MIN_ZOOM = 0.005; // Adjusted for 10x smaller overall scales
     const MAX_ZOOM = 20;
 
     // Panning state variables
@@ -85,6 +85,23 @@ document.addEventListener('DOMContentLoaded', () => {
         sunElement.style.left = `calc(50% - ${sunDiameterPx / 2}px)`;
         sunElement.style.top = `calc(50% - ${sunDiameterPx / 2}px)`;
 
+        const planetListUl = document.getElementById('planet-list');
+
+        // Add Sun to the list
+        if (planetListUl) {
+            const sunLi = document.createElement('li');
+            const sunButton = document.createElement('button');
+            sunButton.textContent = "Sun";
+            sunButton.addEventListener('click', () => focusOnBody({ 
+                name: "Sun", 
+                element: sunElement, // The actual sun DOM element
+                current_x_px: 0, 
+                current_y_px: 0 
+            }));
+            sunLi.appendChild(sunButton);
+            planetListUl.appendChild(sunLi);
+        }
+
         solarSystemData.forEach(body => {
             // Create orbit path
             const a_px = body.semiMajorAxis_au * AU_TO_PX; // Semi-major axis in pixels
@@ -130,11 +147,24 @@ document.addEventListener('DOMContentLoaded', () => {
             planetElement.addEventListener('mouseenter', (e) => showTooltip(e, body));
             planetElement.addEventListener('mousemove', (e) => updateTooltipPosition(e));
             planetElement.addEventListener('mouseleave', () => hideTooltip());
-            planetElement.addEventListener('click', () => focusOnBody(body));
+            planetElement.addEventListener('click', () => focusOnBody(body)); // Existing click on planet itself
+
+            // Add body to the list
+            if (planetListUl) {
+                const li = document.createElement('li');
+                const button = document.createElement('button');
+                button.textContent = body.name;
+                button.addEventListener('click', () => focusOnBody(body));
+                li.appendChild(button);
+                planetListUl.appendChild(li);
+            }
         });
         sunElement.addEventListener('mouseenter', (e) => showTooltip(e, {name: "Sun", diameter_km: SUN_DIAMETER_KM, orbitalPeriod_days: "N/A"}));
         sunElement.addEventListener('mousemove', (e) => updateTooltipPosition(e));
         sunElement.addEventListener('mouseleave', () => hideTooltip());
+        // sunElement's click listener for focus is already set up for the element itself.
+        // The list button for Sun is handled separately above.
+        // Ensure the original sunElement click listener (not the list one) is still here:
         sunElement.addEventListener('click', () => focusOnBody({ name: "Sun", element: sunElement, current_x_px: 0, current_y_px: 0 }));
 
 
