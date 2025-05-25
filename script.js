@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const simTimeSpan = document.getElementById('sim-time');
     const togglePathsButton = document.getElementById('toggle-paths');
     const tooltip = document.getElementById('tooltip');
+    const speedTextInput = document.getElementById('speed-text-input');
     const infoPanel = document.getElementById('info-panel');
     const infoPanelTitle = document.getElementById('info-panel-title');
     const infoPanelContent = document.getElementById('info-panel-content');
@@ -65,6 +66,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function init() {
         if (infoPanel) { // Ensure panel is hidden initially
             infoPanel.style.display = 'none';
+        }
+
+        // Initialize speed text input
+        if (speedTextInput && speedSlider) {
+            speedTextInput.value = parseFloat(speedSlider.value).toFixed(1);
         }
 
         const solarSystemContainerDiv = document.getElementById('solar-system-container');
@@ -181,7 +187,21 @@ document.addEventListener('DOMContentLoaded', () => {
         speedSlider.addEventListener('input', (e) => {
             simulationSpeed = parseFloat(e.target.value);
             speedValueSpan.textContent = `${simulationSpeed.toFixed(1)}x`;
+            if (speedTextInput) {
+                speedTextInput.value = simulationSpeed.toFixed(1);
+            }
         });
+
+        // Speed text input listeners
+        if (speedTextInput && speedSlider && speedValueSpan) {
+            speedTextInput.addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    applySpeedFromTextInput();
+                    event.preventDefault(); 
+                }
+            });
+            speedTextInput.addEventListener('blur', applySpeedFromTextInput);
+        }
 
         togglePathsButton.addEventListener('click', () => {
             pathsVisible = !pathsVisible;
@@ -344,6 +364,32 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 infoPanel.style.display = 'none'; // Hide for Sun or if no body is focused
             }
+        }
+    }
+
+    function applySpeedFromTextInput() {
+        if (!speedTextInput || !speedSlider || !speedValueSpan) return;
+
+        const textValue = parseFloat(speedTextInput.value);
+        const minSpeed = parseFloat(speedSlider.min);
+        const maxSpeed = parseFloat(speedSlider.max);
+
+        if (!isNaN(textValue)) {
+            if (textValue >= minSpeed && textValue <= maxSpeed) {
+                simulationSpeed = textValue;
+                speedSlider.value = textValue; 
+                speedValueSpan.textContent = `${textValue.toFixed(1)}x`;
+            } else {
+                // Value out of range, clamp it
+                const clampedValue = Math.max(minSpeed, Math.min(maxSpeed, textValue));
+                simulationSpeed = clampedValue;
+                speedSlider.value = clampedValue;
+                speedTextInput.value = clampedValue.toFixed(1); 
+                speedValueSpan.textContent = `${clampedValue.toFixed(1)}x`;
+            }
+        } else {
+            // Invalid input, revert to current slider value
+            speedTextInput.value = parseFloat(speedSlider.value).toFixed(1);
         }
     }
 
