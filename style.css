@@ -39,6 +39,61 @@ body {
     vertical-align: middle; /* Align with slider and span */
 }
 
+#set-speed-button {
+    margin-left: 5px;
+    padding: 3px 8px;
+    background-color: #555;
+    color: white;
+    border: 1px solid #777;
+    border-radius: 3px;
+    cursor: pointer;
+    vertical-align: middle; /* Align with slider and span */
+}
+
+#set-speed-button:hover {
+    background-color: #666;
+}
+
+.time-control-group, .time-adjust-buttons {
+    margin-top: 8px;
+    display: flex; /* Align items in a row */
+    align-items: center; /* Vertically align items */
+    flex-wrap: wrap; /* Allow wrapping if controls get too wide */
+}
+
+.time-control-group label {
+    margin-right: 5px; /* Space between label and input */
+}
+
+#time-input {
+    width: 80px; /* Slightly wider for days value */
+    padding: 3px;
+    border: 1px solid #ccc;
+    background-color: #333;
+    color: #fff;
+    vertical-align: middle;
+    margin-right: 5px; /* Space before Set Time button */
+}
+
+.time-adjust-buttons button, #set-time-button {
+    margin-right: 5px; /* Space between buttons */
+    padding: 3px 8px;
+    background-color: #555;
+    color: white;
+    border: 1px solid #777;
+    border-radius: 3px;
+    cursor: pointer;
+    vertical-align: middle;
+}
+.time-adjust-buttons button:last-child, #set-time-button:last-child {
+    margin-right: 0; /* No margin for the last button in a group */
+}
+
+.time-adjust-buttons button:hover, #set-time-button:hover {
+    background-color: #666;
+}
+
+
 .time-info p {
     margin: 5px 0;
 }
@@ -189,4 +244,20 @@ body {
 
 #info-panel-content strong {
     color: #aaa; /* Lighter color for labels */
+}
+
+.saturn-rings {
+    position: absolute; /* Positioned relative to Saturn's div */
+    width: 200%; /* Rings are wider than the planet */
+    height: 200%; /* Adjust height if you want elliptical appearance via border-radius */
+    left: -50%; /* Center the rings on the planet: ( (100% - ring_width_perc) / 2 ) */
+    top: -50%;
+    border: 1px solid rgba(244, 208, 160, 0.4); /* Translucent ring color, adjust thickness */
+    /* To make it look like a flat plane: */
+    border-radius: 50%; /* Makes it a circle/ellipse */
+    /* To give a slight 3D tilt - Saturn's axial tilt is ~26.7 degrees */
+    transform: rotateX(70deg); /* Experiment with this value */
+    /* box-shadow: 0 0 10px rgba(244, 208, 160, 0.5); */ /* Optional glow */
+    pointer-events: none; /* Rings should not interfere with clicks on Saturn */
+    box-sizing: border-box; /* Ensure border doesn't add to width/height for positioning */
 }
