@@ -22,11 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const advanceYearButton = document.getElementById('advance-year-button');
 
     // Constants
-    const AU_TO_PX = 750; // Astronomical Unit to Pixels scale
+    const AU_TO_PX = 750; 
     const SUN_DIAMETER_KM = 1392700;
     const EARTH_DIAMETER_KM = 12742;
-    const KM_TO_PX_DIAMETER = 0.00001; // Scale for celestial body visual diameter
-    const MIN_PLANET_PX = 3; // Minimum visual size for any planet/dwarf planet
+    const KM_TO_PX_DIAMETER = 0.00001; 
+    const MIN_PLANET_PX = 3; 
 
     let simulationSpeed = parseFloat(speedSlider.value); 
     let totalSimulatedTimeDays = 0;
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Zoom variables
     let currentScale = 1.0;
-    const ZOOM_SPEED = 0.1;
+    const ZOOM_SPEED = 0.1; // Represents a 10% change factor
     const MIN_ZOOM = 0.005; 
     const MAX_ZOOM = 20;
 
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const sunDiameterPx = SUN_DIAMETER_KM * KM_TO_PX_DIAMETER;
         sunElement.style.width = `${sunDiameterPx}px`;
         sunElement.style.height = `${sunDiameterPx}px`;
-        sunElement.style.background = '#FFD700'; // Sun's color (simple, no gradient for Sun)
+        sunElement.style.background = '#FFD700';
         
         let maxOrbitRadiusPx = 0;
         solarSystemData.forEach(body => {
@@ -220,7 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setSpeedButton.addEventListener('click', applySpeedFromTextInput);
         }
         
-        // Time control event listeners
         if (setTimeButton && timeInput) {
             setTimeButton.addEventListener('click', applyCustomTime);
             timeInput.addEventListener('keypress', (e) => { 
@@ -253,64 +252,48 @@ document.addEventListener('DOMContentLoaded', () => {
     function solveKepler(M, e, maxIter = 10, tolerance = 1e-7) {
         let E = M; 
         if (e > 0.8) E = Math.PI; 
-
         for (let i = 0; i < maxIter; i++) {
             const E_prev = E;
             const f_E = E_prev - e * Math.sin(E_prev) - M;
             const df_E = 1 - e * Math.cos(E_prev);
             E = E_prev - f_E / df_E;
-            if (Math.abs(E - E_prev) < tolerance) {
-                break;
-            }
+            if (Math.abs(E - E_prev) < tolerance) break;
         }
         return E;
     }
 
     function updatePlanetPosition(body, time_days) {
         if (!body.orbitalPeriod_days || body.orbitalPeriod_days === 0) return; 
-
         const a_au = body.semiMajorAxis_au;
         const e = body.eccentricity;
         const T_days = body.orbitalPeriod_days;
-
         const M = ((2 * Math.PI / T_days) * time_days) % (2 * Math.PI);
         const E = solveKepler(M, e);
         const nu = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
         const r_au = a_au * (1 - e * Math.cos(E));
         const r_px = r_au * AU_TO_PX;
-
         const x_px = r_px * Math.cos(nu);
         const y_px = r_px * Math.sin(nu);
-
         body.current_x_px = x_px;
         body.current_y_px = y_px;
-        
         body.element.style.transform = `translate(calc(-50% + ${x_px}px), calc(-50% + ${y_px}px))`;
     }
     
     function animate(timestamp) {
         const now = new Date();
         earthTimeSpan.textContent = now.toLocaleString();
-
         if (lastTimestamp === 0) lastTimestamp = timestamp;
         const deltaTimeMs = timestamp - lastTimestamp;
         lastTimestamp = timestamp;
-
         const simulatedDaysThisFrame = (simulationSpeed * (deltaTimeMs / 1000));
         totalSimulatedTimeDays += simulatedDaysThisFrame;
-
         const years = Math.floor(totalSimulatedTimeDays / 365.25);
         const days = Math.floor(totalSimulatedTimeDays % 365.25);
         simTimeSpan.textContent = `${years} years, ${days} days`;
-        
         if (timeInput && document.activeElement !== timeInput) { 
             timeInput.value = totalSimulatedTimeDays.toFixed(0);
         }
-
-        solarSystemData.forEach(body => {
-            updatePlanetPosition(body, totalSimulatedTimeDays);
-        });
-
+        solarSystemData.forEach(body => updatePlanetPosition(body, totalSimulatedTimeDays));
         if (focusedBody) {
             if (focusedBody.name === "Sun") {
                 panX = 0;
@@ -321,7 +304,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
         }
-
         requestAnimationFrame(animate);
     }
 
@@ -349,17 +331,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function focusOnBody(bodyToFocus) {
         if (!bodyToFocus) return;
-
         const targetX = typeof bodyToFocus.current_x_px === 'number' ? bodyToFocus.current_x_px : 0;
         const targetY = typeof bodyToFocus.current_y_px === 'number' ? bodyToFocus.current_y_px : 0;
-        
         panX = -targetX * currentScale;
         panY = -targetY * currentScale;
-
         solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
-        
         focusedBody = bodyToFocus; 
-
         if (infoPanel && infoPanelTitle && infoPanelContent) {
             if (bodyToFocus && bodyToFocus.name !== "Sun") { 
                 infoPanelTitle.textContent = bodyToFocus.name;
@@ -378,14 +355,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function applySpeedFromTextInput() {
-        if (!speedTextInput || !speedSlider || !speedValueSpan) {
-            return;
-        }
-
+        if (!speedTextInput || !speedSlider || !speedValueSpan) return;
         let newSpeed = parseFloat(speedTextInput.value);
         const minSpeed = parseFloat(speedSlider.min);
         const maxSpeed = parseFloat(speedSlider.max);
-
         if (!isNaN(newSpeed)) {
             if (newSpeed < minSpeed) {
                 newSpeed = minSpeed;
@@ -394,7 +367,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 newSpeed = maxSpeed;
                 speedTextInput.value = newSpeed.toFixed(1);
             }
-            
             speedSlider.value = newSpeed; 
             simulationSpeed = newSpeed;   
             speedValueSpan.textContent = `${newSpeed.toFixed(1)}x`; 
@@ -416,7 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function adjustTime(days) {
         totalSimulatedTimeDays += days;
         if (totalSimulatedTimeDays < 0) totalSimulatedTimeDays = 0; 
-
         if (timeInput && document.activeElement !== timeInput) {
             timeInput.value = totalSimulatedTimeDays.toFixed(0);
         }
@@ -448,18 +419,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
     solarSystemContainerDiv.addEventListener('wheel', (event) => {
         event.preventDefault();
+
+        // Calculate new scale (common for both modes)
+        // ZOOM_SPEED (e.g., 0.1) results in a 10% change per step.
+        const zoomMultiplier = event.deltaY > 0 ? 1 / (1 + ZOOM_SPEED) : (1 + ZOOM_SPEED);
+        let newScale = currentScale * zoomMultiplier;
+        newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
+
         const solarSystemRect = solarSystemDiv.getBoundingClientRect();
-        const mouseX_relativeToDivOrigin_viewport = event.clientX - solarSystemRect.left;
-        const mouseY_relativeToDivOrigin_viewport = event.clientY - solarSystemRect.top;
-        const mouseX_unscaled = (mouseX_relativeToDivOrigin_viewport - panX) / currentScale;
-        const mouseY_unscaled = (mouseY_relativeToDivOrigin_viewport - panY) / currentScale;
-        const scaleFactor = event.deltaY > 0 ? 1 - ZOOM_SPEED : 1 + ZOOM_SPEED;
-        const newScaleAttempt = currentScale * scaleFactor;
-        const newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScaleAttempt));
-        panX = mouseX_relativeToDivOrigin_viewport - mouseX_unscaled * newScale;
-        panY = mouseY_relativeToDivOrigin_viewport - mouseY_unscaled * newScale;
-        currentScale = newScale;
-        solarSystemDiv.style.transformOrigin = '0 0'; 
+
+        if (focusedBody && focusedBody.name !== "Sun") {
+            // Mode 1: A planet is being followed. Zoom should keep this planet (which is at viewport center) centered.
+            const viewportCenterX = solarSystemContainerDiv.clientWidth / 2;
+            const viewportCenterY = solarSystemContainerDiv.clientHeight / 2;
+
+            const pointToKeepStationaryX_viewport = viewportCenterX - solarSystemRect.left;
+            const pointToKeepStationaryY_viewport = viewportCenterY - solarSystemRect.top;
+            
+            const pointToKeepStationaryX_unscaled = (pointToKeepStationaryX_viewport - panX) / currentScale; // Use currentScale before update
+            const pointToKeepStationaryY_unscaled = (pointToKeepStationaryY_viewport - panY) / currentScale; // Use currentScale before update
+
+            panX = pointToKeepStationaryX_viewport - pointToKeepStationaryX_unscaled * newScale;
+            panY = pointToKeepStationaryY_viewport - pointToKeepStationaryY_unscaled * newScale;
+
+        } else {
+            // Mode 2: No specific planet followed (or Sun is focused) - Use Zoom to Mouse Pointer logic
+            const mouseX_relativeToDivOrigin_viewport = event.clientX - solarSystemRect.left;
+            const mouseY_relativeToDivOrigin_viewport = event.clientY - solarSystemRect.top;
+
+            const mouseX_unscaled = (mouseX_relativeToDivOrigin_viewport - panX) / currentScale; // Use currentScale before update
+            const mouseY_unscaled = (mouseY_relativeToDivOrigin_viewport - panY) / currentScale; // Use currentScale before update
+            
+            panX = mouseX_relativeToDivOrigin_viewport - mouseX_unscaled * newScale;
+            panY = mouseY_relativeToDivOrigin_viewport - mouseY_unscaled * newScale;
+        }
+
+        currentScale = newScale; // Update currentScale globally
+
+        // Apply the transform (common for both modes)
+        solarSystemDiv.style.transformOrigin = '0 0'; // Pan calculations assume origin 0,0
         solarSystemDiv.style.transform = `translate(${panX}px, ${panY}px) scale(${currentScale})`;
     });
 
